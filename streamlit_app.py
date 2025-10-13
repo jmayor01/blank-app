@@ -84,7 +84,6 @@ if uploaded_files:
                         if not cell_value or cell_value.lower() == "total":
                             continue
 
-                        # Detect person names based on previously captured list
                         if cell_value in all_persons_list:
                             current_person = cell_value
                         elif cell_value in known_tasks and current_person and pd.notna(completion_value):
@@ -106,7 +105,6 @@ if uploaded_files:
     if all_data:
         combined_df = pd.concat(all_data, ignore_index=True)
 
-        # Convert Month_Year to datetime for chronological sorting
         def parse_month_year(m):
             try:
                 return datetime.strptime(m, "%B %Y")
@@ -126,13 +124,12 @@ if uploaded_files:
                 df_month = combined_df[combined_df["Month_Year"] == month_year]
                 st.markdown(f"## 📅 {month_year} Summary")
 
-                # --- KPI Summary Cards ---
                 total_completion = int(df_month["Completion"].sum())
                 active_persons = df_month["Person"].nunique()
-                if not df_month.empty:
-                    top_performer = df_month.groupby("Person")["Completion"].sum().idxmax()
-                else:
-                    top_performer = "N/A"
+                top_performer = (
+                    df_month.groupby("Person")["Completion"].sum().idxmax()
+                    if not df_month.empty else "N/A"
+                )
 
                 hide_top = st.checkbox(f"🙈 Hide Top Performer ({month_year})", value=False)
 
@@ -144,7 +141,6 @@ if uploaded_files:
                 else:
                     c3.empty()
 
-                # --- Person Selection ---
                 col1, col2 = st.columns([1, 5])
                 with col1:
                     select_all = st.button(f"✅ Select All ({month_year})")
@@ -167,18 +163,23 @@ if uploaded_files:
 
                 df_filtered = df_month[df_month["Person"].isin(selected_persons)]
 
-                # --- Enhanced Summary Table ---
-                person_summary = df_filtered.groupby(["Person", "Portal"])["Completion"].sum().reset_index()
+                # --- Clean Summary Table (No background color) ---
                 st.markdown("### 👤 Task Completion Summary per Person and Portal")
                 st.dataframe(
-                    person_summary.style.background_gradient(cmap="Blues", subset=["Completion"]),
+                    df_filtered.groupby(["Person", "Portal"])["Completion"]
+                    .sum()
+                    .reset_index()
+                    .style.set_table_styles(
+                        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('text-align', 'center')]},
+                         {'selector': 'td', 'props': [('text-align', 'center')]}]
+                    ),
                     use_container_width=True
                 )
 
                 # --- Bar Chart ---
                 st.markdown("#### 📊 Bar Chart - Completion per Person")
                 bar_fig = px.bar(
-                    person_summary,
+                    df_filtered.groupby(["Person", "Portal"])["Completion"].sum().reset_index(),
                     x="Person",
                     y="Completion",
                     color="Portal",
@@ -189,16 +190,22 @@ if uploaded_files:
                 )
                 st.plotly_chart(bar_fig, use_container_width=True)
 
-                # --- Task Summary Table & Chart ---
+                # --- Task Summary Table ---
                 st.markdown("### 🧩 Task Completion per Task Type")
-                task_summary = df_filtered.groupby("Task")["Completion"].sum().reset_index()
                 st.dataframe(
-                    task_summary.style.background_gradient(cmap="Greens", subset=["Completion"]),
+                    df_filtered.groupby("Task")["Completion"]
+                    .sum()
+                    .reset_index()
+                    .style.set_table_styles(
+                        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('text-align', 'center')]},
+                         {'selector': 'td', 'props': [('text-align', 'center')]}]
+                    ),
                     use_container_width=True
                 )
 
+                # --- Task Chart ---
                 task_fig = px.bar(
-                    task_summary,
+                    df_filtered.groupby("Task")["Completion"].sum().reset_index(),
                     x="Task",
                     y="Completion",
                     title=f"Task Type Breakdown ({month_year})",
@@ -216,13 +223,12 @@ if uploaded_files:
 
             combined_filtered = pd.concat(monthly_data.values(), ignore_index=True)
 
-            # --- KPI Summary for Year ---
             total_completion_year = int(combined_filtered["Completion"].sum())
             total_active_persons = combined_filtered["Person"].nunique()
-            if not combined_filtered.empty:
-                top_performer_year = combined_filtered.groupby("Person")["Completion"].sum().idxmax()
-            else:
-                top_performer_year = "N/A"
+            top_performer_year = (
+                combined_filtered.groupby("Person")["Completion"].sum().idxmax()
+                if not combined_filtered.empty else "N/A"
+            )
 
             hide_top = st.checkbox("🙈 Hide Top Performer (Year)", value=False)
 
@@ -234,10 +240,7 @@ if uploaded_files:
             else:
                 c3.empty()
 
-            # --- Line Chart: Monthly Completion Trend ---
-            monthly_summary = (
-                combined_filtered.groupby(["Month_Year", "Person"])["Completion"].sum().reset_index()
-            )
+            monthly_summary = combined_filtered.groupby(["Month_Year", "Person"])["Completion"].sum().reset_index()
             monthly_summary["Month_Order"] = monthly_summary["Month_Year"].apply(parse_month_year)
             monthly_summary = monthly_summary.sort_values("Month_Order")
 
@@ -254,10 +257,7 @@ if uploaded_files:
             trend_fig.update_xaxes(categoryorder="array", categoryarray=monthly_summary["Month_Year"].unique())
             st.plotly_chart(trend_fig, use_container_width=True)
 
-            # --- Portal Completion ---
-            portal_summary = (
-                combined_filtered.groupby(["Month_Year", "Portal"])["Completion"].sum().reset_index()
-            )
+            portal_summary = combined_filtered.groupby(["Month_Year", "Portal"])["Completion"].sum().reset_index()
             portal_summary["Month_Order"] = portal_summary["Month_Year"].apply(parse_month_year)
             portal_summary = portal_summary.sort_values("Month_Order")
 
@@ -274,13 +274,18 @@ if uploaded_files:
             portal_fig.update_xaxes(categoryorder="array", categoryarray=portal_summary["Month_Year"].unique())
             st.plotly_chart(portal_fig, use_container_width=True)
 
-            # --- Leaderboard ---
             st.markdown("### 🏅 Leaderboard - Top Performers of the Year")
             leaderboard = (
-                combined_filtered.groupby("Person")["Completion"].sum().reset_index().sort_values(by="Completion", ascending=False)
+                combined_filtered.groupby("Person")["Completion"]
+                .sum()
+                .reset_index()
+                .sort_values(by="Completion", ascending=False)
             )
             st.dataframe(
-                leaderboard.style.background_gradient(cmap="Purples", subset=["Completion"]),
+                leaderboard.style.set_table_styles(
+                    [{'selector': 'th', 'props': [('font-weight', 'bold'), ('text-align', 'center')]},
+                     {'selector': 'td', 'props': [('text-align', 'center')]}]
+                ),
                 use_container_width=True
             )
 
