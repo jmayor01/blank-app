@@ -26,7 +26,6 @@ st.markdown("""
 <style>
 /* Sidebar Styling */
 section[data-testid="stSidebar"] {
-    background-color: #f8fafc;
     border-right: 1px solid #e5e7eb;
 }
 .sidebar-title {
@@ -43,7 +42,6 @@ section[data-testid="stSidebar"] {
     background-color: white;
 }
 .stExpander:hover {
-    border-color: #3b82f6;
     box-shadow: 0px 0px 8px rgba(59,130,246,0.2);
 }
 
