@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+from datetime import datetime
 
 # --- Auto-install required packages (local use only) ---
 def ensure(package):
@@ -16,7 +17,6 @@ for pkg in ["streamlit", "pandas", "plotly", "openpyxl"]:
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
 
 # --- Streamlit Page Setup ---
 st.set_page_config(
@@ -28,6 +28,7 @@ st.set_page_config(
 # --- Custom Styling ---
 st.markdown("""
 <style>
+/* Sidebar Styling */
 section[data-testid="stSidebar"] {
     border-right: 1px solid #e5e7eb;
 }
@@ -45,6 +46,8 @@ section[data-testid="stSidebar"] {
 .stExpander:hover {
     box-shadow: 0px 0px 8px rgba(59,130,246,0.2);
 }
+
+/* Main Page Styling */
 h1, h2, h3, h4 { font-weight: 700; }
 .stDataFrame, .stPlotlyChart { border-radius: 10px !important; }
 .stButton>button { border-radius: 10px; }
@@ -54,7 +57,7 @@ h1, h2, h3, h4 { font-weight: 700; }
 # --- Sidebar ---
 st.sidebar.markdown('<div class="sidebar-title">📂 Task Report Analyzer</div>', unsafe_allow_html=True)
 
-# Sidebar: Upload Section
+# --- Collapsible Upload Section ---
 with st.sidebar.expander("📤 Upload Monthly Excel Reports", expanded=True):
     uploaded_files = st.file_uploader(
         "Upload one or more Excel files (.xlsx) containing monthly task reports",
@@ -62,14 +65,13 @@ with st.sidebar.expander("📤 Upload Monthly Excel Reports", expanded=True):
         accept_multiple_files=True
     )
 
-# Sidebar: Person Selection
+# --- Collapsible Select Persons Section ---
 with st.sidebar.expander("👥 Select Persons to Display", expanded=False):
-    st.write("Choose which persons to include in charts and summaries.")
-    selected_sidebar_persons = []
+    person_selection_placeholder = st.empty()
 
-# Sidebar: Top Performer Visibility
+# --- Collapsible Top Performer Control ---
 with st.sidebar.expander("🏆 Top Performer Settings", expanded=False):
-    hide_all_top_performer = st.checkbox("Hide All Top Performer Sections", value=False)
+    global_hide_top = st.checkbox("Hide All Top Performer Sections", value=False)
 
 # --- Begin main logic only after upload ---
 if uploaded_files:
@@ -108,16 +110,17 @@ if uploaded_files:
 
     all_persons_list = sorted(list(all_persons_detected))
 
-    # --- Sidebar Person Selector Update ---
-    if all_persons_list:
-        selected_sidebar_persons = st.sidebar.multiselect(
-            "Select Persons to Display",
-            options=all_persons_list,
-            default=all_persons_list,
-            key="sidebar_persons"
-        )
-    else:
-        st.sidebar.warning("No persons detected yet. Upload valid Excel files.")
+    # --- Sidebar Person Selector ---
+    with person_selection_placeholder.container():
+        if all_persons_list:
+            selected_sidebar_persons = st.multiselect(
+                "Choose persons to display across reports",
+                options=all_persons_list,
+                default=all_persons_list
+            )
+        else:
+            st.warning("No persons detected yet. Upload valid Excel files.")
+            selected_sidebar_persons = []
 
     # Step 2: Process each file
     for uploaded_file in uploaded_files:
@@ -187,11 +190,7 @@ if uploaded_files:
                     if not df_month.empty else "N/A"
                 )
 
-                if hide_all_top_performer:
-                    hide_top = True
-                else:
-                    hide_top = st.checkbox(f"🙈 Hide Top Performer ({month_year})", value=False)
-
+                hide_top = global_hide_top or st.checkbox(f"🙈 Hide Top Performer ({month_year})", value=False)
                 c1, c2, c3 = st.columns(3)
                 c1.metric("✅ Total Completions", f"{total_completion}")
                 c2.metric("👥 Active Persons", f"{active_persons}")
@@ -200,6 +199,7 @@ if uploaded_files:
                 else:
                     c3.empty()
 
+                # Filter by persons (merged with sidebar selection)
                 selected_persons = [p for p in selected_sidebar_persons if p in df_month["Person"].unique()]
                 df_filtered = df_month[df_month["Person"].isin(selected_persons)]
 
@@ -257,11 +257,7 @@ if uploaded_files:
                 if not combined_filtered.empty else "N/A"
             )
 
-            if hide_all_top_performer:
-                hide_top = True
-            else:
-                hide_top = st.checkbox("🙈 Hide Top Performer (Year)", value=False)
-
+            hide_top = global_hide_top or st.checkbox("🙈 Hide Top Performer (Year)", value=False)
             c1, c2, c3 = st.columns(3)
             c1.metric("📅 Total Yearly Completions", f"{total_completion_year}")
             c2.metric("👥 Total Active Persons", f"{total_active_persons}")
