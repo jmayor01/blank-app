@@ -31,7 +31,6 @@ section[data-testid="stSidebar"] {
 .sidebar-title {
     font-size: 20px !important;
     font-weight: 600 !important;
-    color: #1f2937;
     margin-bottom: 10px;
     text-align: center;
 }
@@ -39,17 +38,16 @@ section[data-testid="stSidebar"] {
     border-radius: 10px;
     border: 1px solid #e5e7eb;
     margin-bottom: 10px;
-    background-color: white;
 }
 .stExpander:hover {
     box-shadow: 0px 0px 8px rgba(59,130,246,0.2);
 }
 
 /* Main Page Styling */
-h1, h2, h3, h4 { color: #0A4D68; font-weight: 700; }
+h1, h2, h3, h4 { font-weight: 700; }
 .stDataFrame, .stPlotlyChart { border-radius: 10px !important; }
-.stButton>button { border-radius: 10px; background-color: #007ACC; color: white; }
-.stButton>button:hover { background-color: #005EA6; }
+.stButton>button { border-radius: 10px; }
+.stButton>button:hover
 </style>
 """, unsafe_allow_html=True)
 
