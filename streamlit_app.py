@@ -10,10 +10,42 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Sidebar ---
-st.sidebar.title("📊 Task Report Dashboard")
+# --- Custom Sidebar Styling ---
+st.markdown("""
+    <style>
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e5e7eb;
+    }
+    .sidebar-title {
+        font-size: 20px !important;
+        font-weight: 600 !important;
+        color: #1f2937;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .sidebar-icon {
+        margin-right: 8px;
+        font-size: 18px;
+    }
+    .stExpander {
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 10px;
+        background-color: white;
+    }
+    .stExpander:hover {
+        border-color: #3b82f6;
+        box-shadow: 0px 0px 8px rgba(59,130,246,0.2);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Collapsible section for file upload
+# --- Sidebar Title ---
+st.sidebar.markdown('<div class="sidebar-title">📊 Task Report Dashboard</div>', unsafe_allow_html=True)
+
+# --- Sidebar Expander 1: Upload ---
 with st.sidebar.expander("📂 Upload Monthly Excel Reports", expanded=True):
     uploaded_files = st.file_uploader(
         "Upload one or more Excel files (.xlsx)",
@@ -21,21 +53,19 @@ with st.sidebar.expander("📂 Upload Monthly Excel Reports", expanded=True):
         accept_multiple_files=True
     )
 
-# Placeholder for dataframe initialization
+# Placeholder for dataframe
 all_data = pd.DataFrame()
 
 if uploaded_files:
-    # Read all uploaded Excel files
     for file in uploaded_files:
         df = pd.read_excel(file)
-        df["Source File"] = file.name  # Keep track of the source file
+        df["Source File"] = file.name
         all_data = pd.concat([all_data, df], ignore_index=True)
-
     st.sidebar.success(f"✅ {len(uploaded_files)} file(s) uploaded successfully!")
 else:
     st.sidebar.warning("⚠️ Please upload at least one Excel file to continue.")
 
-# Collapsible section for filtering persons
+# --- Sidebar Expander 2: Select Persons ---
 with st.sidebar.expander("👥 Select Persons to Display", expanded=False):
     if not all_data.empty and "Person" in all_data.columns:
         persons = sorted(all_data["Person"].dropna().unique())
@@ -51,16 +81,17 @@ with st.sidebar.expander("👥 Select Persons to Display", expanded=False):
 st.title("📈 Monthly Task Summary")
 
 if not all_data.empty:
-    if selected_persons:
-        filtered_data = all_data[all_data["Person"].isin(selected_persons)]
-    else:
-        filtered_data = all_data
+    filtered_data = (
+        all_data[all_data["Person"].isin(selected_persons)]
+        if selected_persons
+        else all_data
+    )
 
-    # --- Display summary table ---
+    # --- Task Table ---
     st.subheader("📋 Task Summary Table")
     st.dataframe(filtered_data, use_container_width=True)
 
-    # --- Task Count per Person ---
+    # --- Bar Chart: Task Count per Person ---
     if "Person" in filtered_data.columns:
         st.subheader("📊 Task Count per Person")
         task_count = filtered_data["Person"].value_counts().reset_index()
@@ -78,7 +109,7 @@ if not all_data.empty:
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Optional Additional Chart ---
+    # --- Pie Chart: Task Status (if available) ---
     if "Status" in filtered_data.columns:
         st.subheader("📉 Task Status Overview")
         status_summary = (
